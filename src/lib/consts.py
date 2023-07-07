@@ -4,7 +4,7 @@ consts = {
     "trakt": {
         "base": "https://api.trakt.tv/",
         "auth": "https://api.trakt.tv/oauth/authorize/",
-        "search": "https://api.trakt.tv/search/trakt/",
+        "search": "https://api.trakt.tv/search/",
         "token": "https://api.trakt.tv/oauth/token/"
     },
     "tracked": {

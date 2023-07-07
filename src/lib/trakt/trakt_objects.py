@@ -80,9 +80,20 @@ class TraktRequest(TraktObject):
     def set_headers(self, headers: dict):
         self.headers.update(headers)
     
+    def set_default_headers(self, client_id: str):
+        self.headers = {
+            "Content-type": "application/json",
+            "trakt-api-key": client_id,
+            "trakt-api-version": '2'
+        }
+    
     def set_cookies(self, cookies: dict):
         self.cookies.update(cookies)
     
-    def call(self, uri: str, body: dict) -> dict:
+    def post(self, uri: str, body: dict):
         res = self.session.post(uri, headers=self.headers, json=body)
-        return res.json()
+        return res
+    
+    def get(self, uri: str, body: dict=None):
+        res = self.session.get(uri, headers=self.headers, json=body)
+        return res

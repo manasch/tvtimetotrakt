@@ -22,76 +22,51 @@ class Authentictor:
         if self.auth_uri is None:
             self.setup()
             webbrowser.open(self.auth_uri, new=1, autoraise=True)        
-            self.get_access_token()
-    
-    def get_access_token(self):
-        code = input(">> Enter the code: ")
+            self.get_token(refresh=False)
+
+    def get_token(self, refresh: bool=False):
+        if not refresh:
+            code = input(">> Enter the code: ")
+            body = {
+                "code": code,
+                "grant_type": "authorization_code"
+            }
+        else:
+            body = {
+                "refresh_token": self.secrets.get("refresh_token"),
+                "grant_type": "refresh_token"
+            }
+
         if self.trakt_request.headers is None:
-            self.trakt_request.set_headers({
-                "Content-type": "application/json",
-                "trakt-api-key": self.secrets.get("client_id"),
-                "trakt-api-version": 2
-            })
+            self.trakt_request.set_default_headers(self.secrets.get("client_id"))
         
-        body = {
-            "code": code,
+        body.update({
             "client_id": self.secrets.get("client_id"),
             "client_secret": self.secrets.get("client_secret"),
             "redirect_uri": self.secrets.get("redirect_uri"),
-            "grant_type": "authorization_code"
-        }
-        response = self.trakt_request.call(consts.get("trakt").get("token"), body)
+        })
+        response = self.trakt_request.post(consts.get("trakt").get("token"), body)
 
-        if response.get("error"):
-            print(response.get("error"))
-            print(response.get("error_description"))
-            self.exchange_access_refresh()
+        status_code = response.status_code
+        data = response.json()
+
+        if status_code == 401:
+            print(data.get("error"))
+            print(data.get("error_description"))
+            if not refresh:
+                exit()
+            else:
+                print("Authorize again..")
+                self.auth_uri = None
+                self.authorize()
         else:
             self.secrets.update({
-                "access_token": response.get("access_token"),
-                "refresh_token": response.get("refresh_token"),
-                "created_at": response.get("created_at"),
-                "expires_in": response.get("expires_in")
+                "access_token": data.get("access_token"),
+                "refresh_token": data.get("refresh_token"),
+                "created_at": data.get("created_at"),
+                "expires_in": data.get("expires_in")
             })
             self.update_secrets()
-            self.trakt_request.set_headers({
-                "Authorization": f"Bearer {self.secrets.get('access_token')}"
-            })
-    
-    def exchange_access_refresh(self):
-        if self.trakt_request.headers is None:
-            self.trakt_request.set_headers({
-                "Content-type": "application/json",
-                "trakt-api-key": self.secrets.get("client_id"),
-                "trakt-api-version": 2
-            })
-        
-        body = {
-            "refresh_token": self.secrets.get("refresh_token"),
-            "client_id": self.secrets.get("client_id"),
-            "client_secret": self.secrets.get("client_secret"),
-            "redirect_uri": self.secrets.get("redirect_uri"),
-            "grant_type": "refresh_token"
-        }
-        response = self.trakt_request.call(consts.get("trakt").get("token"), body)
-
-        if response.get("error"):
-            print(response.get("error"))
-            print(response.get("error_description"))
-            print("Authorize again..")
-            self.auth_uri = None
-            self.authorize()
-        else:
-            self.secrets.update({
-                "access_token": response.get("access_token"),
-                "refresh_token": response.get("refresh_token"),
-                "created_at": response.get("created_at"),
-                "expires_in": response.get("expires_in")
-            })
-            self.update_secrets()
-            self.trakt_request.set_headers({
-                "Authorization": f"Bearer {self.secrets.get('access_token')}"
-            })
     
     def update_secrets(self):
         with open(consts.get("secrets"), 'w') as f:
@@ -116,3 +91,22 @@ class Authentictor:
         self.update_secrets()
         self.set_auth_uri()
 
+class Search:
+    def __init__(self):
+        self.trakt_request = TraktRequest()
+        with open(consts.get("secrets")) as f:
+            self.secrets = json.load(f)
+    
+    def query(self, qtype: str, q: str):
+        uri = consts.get("trakt").get("search")\
+            + f"{qtype}?"\
+            + f"query={q}"
+        
+        self.trakt_request.set_default_headers(self.secrets.get("client_id"))
+        self.trakt_request.set_headers({
+            "X-Pagination-Page": '1',
+            "X-Pagination-Limit": '10',
+            "X-Pagination-Page-Count": '10',
+            "X-Pagination-Item-Count": '100'
+        })
+        return self.trakt_request.get(uri)
