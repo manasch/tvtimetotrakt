@@ -1,6 +1,9 @@
+# Folders
 export/
 __pycache__
 .vscode
 
+# Files
 config.json
+payload.json
 logs.log

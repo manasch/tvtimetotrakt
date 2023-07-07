@@ -1,8 +1,6 @@
 import json
 import webbrowser
 
-import questionary
-
 from lib.consts import consts
 from lib.trakt.trakt_objects import TraktRequest
 
