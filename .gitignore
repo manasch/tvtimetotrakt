@@ -1,6 +1,10 @@
+# Folders
 export/
 __pycache__
 .vscode
 
+# Files
 config.json
+payload.json
+no_match.json
 logs.log

@@ -16,6 +16,9 @@ class TraktEpisode(TraktObject):
     
     def __str__(self) -> str:
         return f"<{self.__class__.__name__}.{self.show_title}.S{self.season_number}.E{self.episode_number}>"
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}.{self.show_title}.S{self.season_number}.E{self.episode_number}>"
     
     def json(self) -> dict:
         return {
@@ -24,12 +27,15 @@ class TraktEpisode(TraktObject):
         }
 
 class TraktSeason(TraktObject):
-    def __init__(self, season_number: int, show_title: str):
+    def __init__(self, season_number: str, show_title: str):
         self.season_number = season_number
         self.show_title = show_title
         self.episodes: typing.List[TraktEpisode] = list()
     
     def __str__(self) -> str:
+        return f"<{self.__class__.__name__}.{self.show_title}.{self.season_number}<{len(self.episodes)}>>"
+
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}.{self.show_title}.{self.season_number}<{len(self.episodes)}>>"
     
     def add_episode(self, episode: TraktEpisode):
@@ -38,7 +44,7 @@ class TraktSeason(TraktObject):
     def json(self) -> dict:
         return {
             "number": self.season_number,
-            "episodes": [episode.json for episode in self.episodes]
+            "episodes": [episode.json() for episode in self.episodes]
         }
 
 class TraktShow(TraktObject):
@@ -49,6 +55,9 @@ class TraktShow(TraktObject):
         self.seasons: typing.Dict[str, TraktSeason] = dict()
     
     def __str__(self) -> str:
+        return f"<{self.__class__.__name__}.{self.show_title}.{self.release_year}<{len(self.seasons)}>>"
+
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}.{self.show_title}.{self.release_year}<{len(self.seasons)}>>"
     
     def add_episode(self, episode: TraktEpisode):
@@ -62,7 +71,7 @@ class TraktShow(TraktObject):
             "title": self.show_title,
             "year": self.release_year,
             "ids": self.ids,
-            "seasons": [season.json for season in self.seasons]
+            "seasons": [season.json() for season in self.seasons.values()]
         }
 
 class TraktRequest(TraktObject):
@@ -80,9 +89,20 @@ class TraktRequest(TraktObject):
     def set_headers(self, headers: dict):
         self.headers.update(headers)
     
+    def set_default_headers(self, client_id: str):
+        self.headers = {
+            "Content-type": "application/json",
+            "trakt-api-key": client_id,
+            "trakt-api-version": '2'
+        }
+    
     def set_cookies(self, cookies: dict):
         self.cookies.update(cookies)
     
-    def call(self, uri: str, body: dict) -> dict:
+    def post(self, uri: str, body: dict):
         res = self.session.post(uri, headers=self.headers, json=body)
-        return res.json()
+        return res
+    
+    def get(self, uri: str, body: dict=None):
+        res = self.session.get(uri, headers=self.headers, json=body)
+        return res
