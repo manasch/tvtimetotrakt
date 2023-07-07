@@ -1,6 +1,8 @@
 import typing
 from abc import ABC
 
+import requests
+
 class TraktObject(ABC):
     def __repr__(self):
         return f"<{self.__class__.__name__}>"
@@ -64,13 +66,16 @@ class TraktShow(TraktObject):
         }
 
 class TraktRequest(TraktObject):
-    __instance__ = None
+    _instance = None
 
-    def __init__(self):
-        TraktRequest.__instance__ == self
-        self.session = requests.session()
-        self.headers = None
-        self.cookies = None
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+            cls.session = requests.session()
+            cls.headers = dict()
+            cls.cookies = None
+        
+        return cls._instance
     
     def set_headers(self, headers: dict):
         self.headers.update(headers)
@@ -81,9 +86,3 @@ class TraktRequest(TraktObject):
     def call(self, uri: str, body: dict) -> dict:
         res = self.session.post(uri, headers=self.headers, json=body)
         return res.json()
-
-    @staticmethod
-    def get_instance(self):
-        if TraktRequest.__instance__ is None:
-            TraktRequest()
-        return TraktRequest.__instance__
