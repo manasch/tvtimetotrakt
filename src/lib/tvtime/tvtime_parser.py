@@ -10,10 +10,11 @@ from lib.trakt.utils import Search
 
 class TVTimeParser():
     def __init__(self, seen_episodes_path: Path):
-        self.seen_episode_file_pointer = open(seen_episodes_path)
+        self.seen_episode_file_pointer = open(seen_episodes_path, encoding="utf-8")
         self.search = Search()
         self.reader = csv.DictReader(self.seen_episode_file_pointer)
         self.shows: typing.Dict[str, TraktShow] = dict()
+        self.no_match: typing.List[TraktEpisode] = list()
         atexit.register(self.close_file)
     
     def parse(self):
@@ -23,7 +24,7 @@ class TVTimeParser():
 
             if not self.shows.get(episode.show_title):
                 res = self.search.query("show", episode.show_title)
-                if res.status_code == 200:
+                if res.status_code == 200 and res.text != "[]":
                     best_match = res.json()[0]
                     new_entry = TraktShow(
                         best_match.get("show").get("title"),
@@ -31,13 +32,30 @@ class TVTimeParser():
                         best_match.get("show").get("ids")
                     )
                     self.shows[episode.show_title] = new_entry
+                elif res.status_code == 200 and res.text == "[]":
+                    self.no_match.append(episode)
+                    continue
                 else:
                     raise Exception("HTTP Error")
             
             show = self.shows.get(episode.show_title)
             show.add_episode(episode)
+        
+        with open(consts.get("no_match"), "w", encoding="utf-8") as f:
+            dump = {
+                "shows": list()
+            }
+            for episode in self.no_match:
+                dump.get("shows").append({
+                    "Title": episode.show_title,
+                    "Season": episode.season_number,
+                    "Episode": episode.episode_number,
+                    "Watched At": episode.watched_at,
+                })
+
+            json.dump(dump, f, indent=2)
                                         
-        with open(consts.get("payload"), "w") as f:
+        with open(consts.get("payload"), "w", encoding="utf-8") as f:
             payload = {
                 "shows": list()
             }
