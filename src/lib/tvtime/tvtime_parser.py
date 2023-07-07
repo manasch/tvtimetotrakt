@@ -14,7 +14,7 @@ class TVTimeParser():
         self.search = Search()
         self.reader = csv.DictReader(self.seen_episode_file_pointer)
         self.shows: typing.Dict[str, TraktShow] = dict()
-        self.no_match: typing.List[TraktEpisode] = list()
+        self.no_match: typing.Dict[str, TraktShow] = dict()
         atexit.register(self.close_file)
     
     def parse(self):
@@ -33,36 +33,37 @@ class TVTimeParser():
                     )
                     self.shows[episode.show_title] = new_entry
                 elif res.status_code == 200 and res.text == "[]":
-                    self.no_match.append(episode)
+                    if not self.no_match.get(episode.show_title):
+                        self.no_match[episode.show_title] = TraktShow(
+                            episode.show_title,
+                            1970,
+                            {}
+                        )
+                    self.no_match.get(episode.show_title).add_episode(episode)
                     continue
                 else:
                     raise Exception("HTTP Error")
             
             show = self.shows.get(episode.show_title)
             show.add_episode(episode)
-        
-        with open(consts.get("no_match"), "w", encoding="utf-8") as f:
-            dump = {
-                "shows": list()
-            }
-            for episode in self.no_match:
-                dump.get("shows").append({
-                    "Title": episode.show_title,
-                    "Season": episode.season_number,
-                    "Episode": episode.episode_number,
-                    "Watched At": episode.watched_at,
-                })
-
-            json.dump(dump, f, indent=2)
-                                        
-        with open(consts.get("payload"), "w", encoding="utf-8") as f:
+                                                
+        with open(consts.get("payload"), "w", encoding="utf-8") as f,\
+            open(consts.get("no_match"), "w", encoding="utf-8") as g:
             payload = {
                 "shows": list()
             }
+            dump = {
+                "shows": list()
+            }
+
             for _, tvshow in self.shows.items():
                 payload.get("shows").append(tvshow.json())
             
+            for _, tvshow in self.no_match.items():
+                dump.get("shows").append(tvshow.json())
+
             json.dump(payload, f, indent=2)
+            json.dump(dump, g, indent=2)
     
     def close_file(self):
         self.seen_episode_file_pointer.close()

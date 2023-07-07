@@ -4,23 +4,36 @@ import webbrowser
 from lib.consts import consts
 from lib.trakt.trakt_objects import TraktRequest
 
-class Authentictor:
-    def __init__(self):
-        self.response_type = "code"
-        self.trakt_request = TraktRequest()
-        with open(consts.get("secrets")) as f:
-            self.secrets = json.load(f)
+class SecretsHandler:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+            with open(consts.get("secrets")) as f:
+                cls._secrets = json.load(f)
         
-        self.auth_uri = None if self.secrets.get("client_id") is None\
-            or self.secrets.get("redirect_uri") is None\
-            or self.secrets.get("access_token") is None\
-            else consts.get("trakt").get("auth")
+        return cls._instance
     
-    def authorize(self):
-        if self.auth_uri is None:
-            self.setup()
-            webbrowser.open(self.auth_uri, new=1, autoraise=True)        
-            self.get_token(refresh=False)
+    def get_secrets(self) -> dict:
+        return self._secrets
+    
+    def update_secrets(self, secrets: dict):
+        self._secrets.update(secrets)
+        with open(consts.get("secrets"), 'w') as f:
+            json.dump(self._secrets, f, indent=2)
+
+class TokenHandler:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+            cls.trakt_request = TraktRequest()
+            cls.secrets_instance = SecretsHandler()
+            cls.secrets = cls.secrets_instance.get_secrets()
+        
+        return cls._instance
 
     def get_token(self, refresh: bool=False):
         if not refresh:
@@ -55,8 +68,6 @@ class Authentictor:
                 exit()
             else:
                 print("Authorize again..")
-                self.auth_uri = None
-                self.authorize()
         else:
             self.secrets.update({
                 "access_token": data.get("access_token"),
@@ -64,18 +75,38 @@ class Authentictor:
                 "created_at": data.get("created_at"),
                 "expires_in": data.get("expires_in")
             })
-            self.update_secrets()
-    
-    def update_secrets(self):
-        with open(consts.get("secrets"), 'w') as f:
-            json.dump(self.secrets, f, indent=2)
-    
+            self.secrets_instance.update_secrets(self.secrets)
+        return (status_code, refresh)
+
+class Authentictor:
+    def __init__(self):
+        self.response_type = "code"
+        self.token_handler = TokenHandler()
+        self.trakt_request = TraktRequest()
+        self.secrets_instance = SecretsHandler()
+        self.secrets = self.secrets_instance.get_secrets()
+        
+        self.auth_uri = None if self.secrets.get("client_id") is None\
+            or self.secrets.get("redirect_uri") is None\
+            or self.secrets.get("access_token") is None\
+            else consts.get("trakt").get("auth")
+
+    def authorize(self):
+        if self.auth_uri is None:
+            self.setup()
+            webbrowser.open(self.auth_uri, new=1, autoraise=True)        
+            stat_code, ref = self.token_handler.get_token(refresh=False)
+
+            if stat_code == 401 and ref:
+                self.auth_uri = None
+                self.authorize()
+
     def set_auth_uri(self):
         self.auth_uri = consts.get("trakt").get("auth")\
             + f"?response_type={self.response_type}"\
             + f"&client_id={self.secrets.get('client_id')}"\
             + f"&redirect_uri={self.secrets.get('redirect_uri')}"
-    
+
     def setup(self):
         client_id = input(">> Enter the client id: ")
         client_secret = input(">> Enter the client secret: ")
@@ -86,14 +117,14 @@ class Authentictor:
             "client_secret": client_secret,
             "redirect_uri": redirect_uri
         })
-        self.update_secrets()
+        self.secrets_instance.update_secrets(self.secrets)
         self.set_auth_uri()
 
 class Search:
     def __init__(self):
         self.trakt_request = TraktRequest()
-        with open(consts.get("secrets")) as f:
-            self.secrets = json.load(f)
+        self.secrets_instance = SecretsHandler()
+        self.secrets = self.secrets_instance.get_secrets()
     
     def query(self, qtype: str, q: str):
         uri = consts.get("trakt").get("search")\
