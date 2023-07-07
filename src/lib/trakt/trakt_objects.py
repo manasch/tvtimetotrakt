@@ -62,3 +62,28 @@ class TraktShow(TraktObject):
             "ids": self.ids,
             "seasons": [season.json for season in self.seasons]
         }
+
+class TraktRequest(TraktObject):
+    __instance__ = None
+
+    def __init__(self):
+        TraktRequest.__instance__ == self
+        self.session = requests.session()
+        self.headers = None
+        self.cookies = None
+    
+    def set_headers(self, headers: dict):
+        self.headers.update(headers)
+    
+    def set_cookies(self, cookies: dict):
+        self.cookies.update(cookies)
+    
+    def call(self, uri: str, body: dict) -> dict:
+        res = self.session.post(uri, headers=self.headers, json=body)
+        return res.json()
+
+    @staticmethod
+    def get_instance(self):
+        if TraktRequest.__instance__ is None:
+            TraktRequest()
+        return TraktRequest.__instance__

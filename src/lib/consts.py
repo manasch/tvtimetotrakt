@@ -8,5 +8,6 @@ consts = {
     },
     "tracked": {
         "episodes" : (Path.cwd().parent / "export" / "seen_episode.csv").resolve()
-    }
+    },
+    "secrets": (Path.cwd() / "lib" / "secrets.json").resolve()
 }
