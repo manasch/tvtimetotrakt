@@ -12,7 +12,7 @@ class SecretsHandler:
             cls._instance = super().__new__(cls, *args, **kwargs)
             if not consts.get("secrets").exists():
                 with open(consts.get("secrets"), 'w') as f:
-                    json.dump(consts.get("secrets_format", indent=2))
+                    json.dump(consts.get("secrets_format"), f, indent=2)
 
             with open(consts.get("secrets")) as f:
                 cls._secrets = json.load(f)
@@ -115,6 +115,10 @@ class Authentictor:
         client_id = input(">> Enter the client id: ")
         client_secret = input(">> Enter the client secret: ")
         redirect_uri = input(">> Enter the redirect uri: ")
+        timezone = input(">> Enter timezone [Ex: UTC+05:30]: ")
+
+        with open(consts.get("timezone"), 'w') as f:
+            f.write(timezone)
         
         self.secrets.update({
             "client_id": client_id,
