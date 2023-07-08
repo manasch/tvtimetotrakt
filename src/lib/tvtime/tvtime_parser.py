@@ -17,6 +17,10 @@ class TVTimeParser():
         self.no_match: typing.Dict[str, TraktShow] = dict()
         atexit.register(self.close_file)
     
+    def convert_to_timezone(self, date_time: str) -> str:
+        
+        return ""
+    
     def parse(self):
         for row in self.reader:
             episode = TraktEpisode(row["episode_season_number"], row["episode_number"], row["tv_show_name"], row["updated_at"])

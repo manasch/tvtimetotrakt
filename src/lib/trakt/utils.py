@@ -10,6 +10,10 @@ class SecretsHandler:
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls, *args, **kwargs)
+            if not consts.get("secrets").exists():
+                with open(consts.get("secrets"), 'w') as f:
+                    json.dump(consts.get("secrets_format", indent=2))
+
             with open(consts.get("secrets")) as f:
                 cls._secrets = json.load(f)
         
