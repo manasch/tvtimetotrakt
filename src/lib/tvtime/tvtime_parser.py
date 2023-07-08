@@ -93,6 +93,10 @@ class TVTimeParser:
 
             json.dump(payload, f, indent=2)
             json.dump(dump, g, indent=2)
+        
+        if len(self.no_match) > 0:
+            print("Trakt couldn't find the information on these shows:", consts.get("no_match"))
+            print("Handling this has not yet been implemented, add these shows manually or change their names in", consts.get("tracked").get("episodes"))
     
     def close_file(self):
         self.seen_episode_file_pointer.close()

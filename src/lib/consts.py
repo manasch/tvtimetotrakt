@@ -5,7 +5,8 @@ consts = {
         "base": "https://api.trakt.tv/",
         "auth": "https://api.trakt.tv/oauth/authorize/",
         "search": "https://api.trakt.tv/search/",
-        "token": "https://api.trakt.tv/oauth/token/"
+        "token": "https://api.trakt.tv/oauth/token/",
+        "history": "https://api.trakt.tv/sync/history"
     },
     "tracked": {
         "episodes" : (Path.cwd().parent / "export" / "seen_episode.csv").resolve()
