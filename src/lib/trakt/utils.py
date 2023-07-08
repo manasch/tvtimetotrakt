@@ -10,6 +10,10 @@ class SecretsHandler:
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls, *args, **kwargs)
+            if not consts.get("secrets").exists():
+                with open(consts.get("secrets"), 'w') as f:
+                    json.dump(consts.get("secrets_format"), f, indent=2)
+
             with open(consts.get("secrets")) as f:
                 cls._secrets = json.load(f)
         
@@ -30,8 +34,8 @@ class TokenHandler:
         if not cls._instance:
             cls._instance = super().__new__(cls, *args, **kwargs)
             cls.trakt_request = TraktRequest()
-            cls.secrets_instance = SecretsHandler()
-            cls.secrets = cls.secrets_instance.get_secrets()
+            cls.secrets_handler = SecretsHandler()
+            cls.secrets = cls.secrets_handler.get_secrets()
         
         return cls._instance
 
@@ -75,7 +79,7 @@ class TokenHandler:
                 "created_at": data.get("created_at"),
                 "expires_in": data.get("expires_in")
             })
-            self.secrets_instance.update_secrets(self.secrets)
+            self.secrets_handler.update_secrets(self.secrets)
         return (status_code, refresh)
 
 class Authentictor:
@@ -83,8 +87,8 @@ class Authentictor:
         self.response_type = "code"
         self.token_handler = TokenHandler()
         self.trakt_request = TraktRequest()
-        self.secrets_instance = SecretsHandler()
-        self.secrets = self.secrets_instance.get_secrets()
+        self.secrets_handler = SecretsHandler()
+        self.secrets = self.secrets_handler.get_secrets()
         
         self.auth_uri = None if self.secrets.get("client_id") is None\
             or self.secrets.get("redirect_uri") is None\
@@ -111,20 +115,24 @@ class Authentictor:
         client_id = input(">> Enter the client id: ")
         client_secret = input(">> Enter the client secret: ")
         redirect_uri = input(">> Enter the redirect uri: ")
+        timezone = input(">> Enter timezone [Ex: UTC+05:30]: ")
+
+        with open(consts.get("timezone"), 'w') as f:
+            f.write(timezone)
         
         self.secrets.update({
             "client_id": client_id,
             "client_secret": client_secret,
             "redirect_uri": redirect_uri
         })
-        self.secrets_instance.update_secrets(self.secrets)
+        self.secrets_handler.update_secrets(self.secrets)
         self.set_auth_uri()
 
 class Search:
     def __init__(self):
         self.trakt_request = TraktRequest()
-        self.secrets_instance = SecretsHandler()
-        self.secrets = self.secrets_instance.get_secrets()
+        self.secrets_handler = SecretsHandler()
+        self.secrets = self.secrets_handler.get_secrets()
     
     def query(self, qtype: str, q: str):
         uri = consts.get("trakt").get("search")\
@@ -139,3 +147,19 @@ class Search:
             "X-Pagination-Item-Count": '100'
         })
         return self.trakt_request.get(uri)
+
+class UpdateHistory:
+    def __init__(self):
+        with open(consts.get("payload")) as f:
+            self.payload = json.load(f)
+        self.endpoint = consts.get("trakt").get("history")
+        self.trakt_request = TraktRequest()
+        self.secrets_handler = SecretsHandler()
+        self.secrets = self.secrets_handler.get_secrets()
+    
+    def update(self):
+        self.trakt_request.set_default_headers(self.secrets.get("client_id"))
+        self.trakt_request.set_headers({
+            "Authorization": f"Bearer {self.secrets.get('access_token')}"
+        })
+        return self.trakt_request.post(self.endpoint, self.payload)

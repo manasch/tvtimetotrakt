@@ -8,7 +8,7 @@ class TraktObject(ABC):
         return f"<{self.__class__.__name__}>"
 
 class TraktEpisode(TraktObject):
-    def __init__(self, season_number: int, episode_number: int, show_title: str, watched_at: str):
+    def __init__(self, season_number: str, episode_number: str, show_title: str, watched_at: str):
         self.season_number = season_number
         self.episode_number = episode_number
         self.show_title = show_title
@@ -23,7 +23,7 @@ class TraktEpisode(TraktObject):
     def json(self) -> dict:
         return {
             "watched_at": self.watched_at,
-            "number": self.episode_number
+            "number": int(self.episode_number)
         }
 
 class TraktSeason(TraktObject):
@@ -43,7 +43,7 @@ class TraktSeason(TraktObject):
     
     def json(self) -> dict:
         return {
-            "number": self.season_number,
+            "number": int(self.season_number),
             "episodes": [episode.json() for episode in self.episodes]
         }
 

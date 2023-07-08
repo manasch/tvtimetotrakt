@@ -4,7 +4,6 @@ __pycache__
 .vscode
 
 # Files
-config.json
-payload.json
-no_match.json
+*.json
 logs.log
+timezone
