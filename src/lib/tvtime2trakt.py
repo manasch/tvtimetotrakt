@@ -7,12 +7,12 @@ from lib.trakt.utils import Authentictor, UpdateHistory
 class TVTime2Trakt:
     def __init__(self):
         self.authenticator = Authentictor()
-        self.parser = TVTimeParser(consts.get("tracked").get("episodes"))
-        self.updater = UpdateHistory()
 
     def run(self):
         self.authenticator.authorize()
+        self.parser = TVTimeParser(consts.get("tracked").get("episodes"))
         self.parser.parse()
+        self.updater = UpdateHistory()
         print("A summary of the parsed content can be found in:", consts.get("payload"))
 
         update = input("Go ahead with updating trakt history [y/n]: ").lower()
