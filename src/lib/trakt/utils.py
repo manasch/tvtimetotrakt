@@ -148,6 +148,23 @@ class Search:
         })
         return self.trakt_request.get(uri)
 
+class GetUserList:
+    def __init__(self):
+        self.trakt_request = TraktRequest()
+        self.secrets_handler = SecretsHandler()
+        self.secrets = self.secrets_handler.get_secrets()
+
+    def query(self, slug: str, entry_type: str):
+        uri = consts.get("trakt").get("base")\
+            + f"users/{slug}/"\
+            + f"watched/{entry_type}"
+
+        self.trakt_request.set_default_headers(self.secrets.get("client_id"))
+        self.trakt_request.set_headers({
+            "Authorization": f"Bearer {self.secrets.get('access_token')}"
+        })
+        return self.trakt_request.get(uri)
+
 class UpdateHistory:
     def __init__(self):
         with open(consts.get("payload")) as f:
